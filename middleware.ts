@@ -7,6 +7,7 @@
 // =====================================================================
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { isDangiAdminEmail } from "@/lib/admin-emails";
 
 function configured(url?: string, key?: string): boolean {
   return Boolean(
@@ -62,8 +63,20 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
-  // 이미 로그인 상태에서 로그인 페이지 접근 → 대시보드로
-  if (user && isLogin) {
+  // 로그인은 됐지만 화이트리스트가 아닌 계정 → 로그인 페이지로(권한 없음 안내)
+  //   BOOIN 공유 DB의 일반 회원이 로그인만으로 /admin 에 들어오지 못하게 차단.
+  //   로그인 페이지 자체는 예외(안내를 보여줘야 하므로).
+  const isAdmin = isDangiAdminEmail(user?.email);
+  if (user && !isAdmin && !isLogin) {
+    const redirectUrl = request.nextUrl.clone();
+    redirectUrl.pathname = "/admin/login";
+    redirectUrl.search = "";
+    redirectUrl.searchParams.set("error", "not_admin");
+    return NextResponse.redirect(redirectUrl);
+  }
+
+  // 이미 관리자로 로그인한 상태에서 로그인 페이지 접근 → 대시보드로
+  if (user && isAdmin && isLogin) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = "/admin";
     redirectUrl.search = "";

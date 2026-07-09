@@ -8,7 +8,11 @@
 import { revalidatePath } from "next/cache";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import type { PropertyInsert, PropertyStatus } from "@/lib/supabase/types";
+import type {
+  PropertyChannel,
+  PropertyInsert,
+  PropertyStatus,
+} from "@/lib/supabase/types";
 
 export interface ActionResult {
   ok: boolean;
@@ -34,6 +38,11 @@ export interface PropertyFormValues {
   verified: boolean;
   status: PropertyStatus;
   lead_id: string | null;
+  // 003: 파트너 채널 필드(admin 폼은 direct 기본값으로 전달)
+  channel: PropertyChannel;
+  partner_id: string | null;
+  owner_consent: boolean;
+  owner_consent_note: string | null;
 }
 
 function toRow(v: PropertyFormValues): PropertyInsert {
@@ -54,6 +63,10 @@ function toRow(v: PropertyFormValues): PropertyInsert {
     verified: v.verified,
     status: v.status,
     lead_id: v.lead_id,
+    channel: v.channel,
+    partner_id: v.partner_id,
+    owner_consent: v.owner_consent,
+    owner_consent_note: v.owner_consent_note,
   };
 }
 

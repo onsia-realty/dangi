@@ -1,9 +1,11 @@
 "use client";
-// 관리자 로그인 (이메일/비밀번호 · Supabase Auth)
-//   - 회원가입 UI 없음(온시아 계정은 Supabase 대시보드에서 수동 생성).
-//   - env 미설정이면 폼 비활성 + "Supabase 미설정" 안내.
-import { Suspense, useEffect, useState } from "react";
+// 파트너 로그인 (이메일/비밀번호 · Supabase Auth)
+//   - 관리자 로그인(/admin/login)과 별개. BOOIN 일반 회원 계정으로 로그인 가능.
+//   - 로그인 성공 시 /partner-console 로 이동(레이아웃이 파트너 상태에 따라 분기).
+//   - env 미설정이면 폼 비활성 + 안내.
+import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
@@ -11,23 +13,13 @@ import { isSupabaseConfigured } from "@/lib/supabase/config";
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirect = searchParams.get("redirect") || "/admin";
-  const notAdmin = searchParams.get("error") === "not_admin";
+  const redirect = searchParams.get("redirect") || "/partner-console";
   const configured = isSupabaseConfigured();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
-  // ?error=not_admin: 화이트리스트가 아닌 계정으로 로그인된 상태.
-  //   미들웨어가 여기로 리다이렉트했다면 남아있는 세션을 정리(signOut)해
-  //   다음 시도가 깨끗하게 시작되도록 한다(심층 방어).
-  useEffect(() => {
-    if (!notAdmin || !configured) return;
-    const supabase = createClient();
-    void supabase.auth.signOut();
-  }, [notAdmin, configured]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -45,8 +37,10 @@ function LoginForm() {
         setLoading(false);
         return;
       }
-      // 세션 쿠키 반영 후 이동(서버 레이아웃 재평가를 위해 refresh)
-      router.replace(redirect.startsWith("/admin") ? redirect : "/admin");
+      // 파트너 콘솔 경로로만 이동(외부 리다이렉트 방지)
+      router.replace(
+        redirect.startsWith("/partner-console") ? redirect : "/partner-console",
+      );
       router.refresh();
     } catch {
       setError("로그인 중 문제가 발생했습니다. 잠시 후 다시 시도해 주세요.");
@@ -64,9 +58,9 @@ function LoginForm() {
           <span className="text-2xl font-extrabold tracking-tight text-emerald-700">
             BOOIN
           </span>
-          <span className="text-xs text-zinc-400">관리자</span>
+          <span className="text-xs text-zinc-400">파트너</span>
         </div>
-        <p className="mt-1 text-sm text-zinc-500">온시아 내부 관리자 로그인</p>
+        <p className="mt-1 text-sm text-zinc-500">파트너 중개사 콘솔 로그인</p>
       </div>
 
       {!configured && (
@@ -82,7 +76,7 @@ function LoginForm() {
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="admin@onsia.co.kr"
+            placeholder="agent@example.com"
             className={fieldClass}
             disabled={!configured || loading}
             autoComplete="email"
@@ -118,20 +112,22 @@ function LoginForm() {
         </Button>
       </form>
 
-      <p className="mt-4 text-center text-xs text-zinc-400">
-        계정 발급은 온시아 관리자에게 문의하세요.
+      <p className="mt-4 text-center text-xs text-zinc-500">
+        아직 파트너가 아니신가요?{" "}
+        <Link
+          href="/partner"
+          className="font-medium text-emerald-700 underline"
+        >
+          파트너 안내 보기
+        </Link>
       </p>
     </div>
   );
 }
 
-export default function AdminLoginPage() {
+export default function PartnerLoginPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="text-sm text-zinc-400">로딩 중...</div>
-      }
-    >
+    <Suspense fallback={<div className="text-sm text-zinc-400">로딩 중...</div>}>
       <LoginForm />
     </Suspense>
   );

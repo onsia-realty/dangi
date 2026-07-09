@@ -51,10 +51,16 @@ export default function PublicLayout({
                 온시아공인중개사사무소
               </p>
               <p className="text-xs text-zinc-500">
-                대표: (준비 중) · 사업자등록번호: 000-00-00000
+                대표: 연대겸 · 사업자등록번호: 846-23-01501
               </p>
               <p className="text-xs text-zinc-500">
-                중개등록번호: 0000-0000-0000 · 서울특별시
+                중개사무소 등록번호: 제11710-2022-00250호
+              </p>
+              <p className="text-xs text-zinc-500">
+                통신판매업 신고번호: 제2026-서울송파-0723호
+              </p>
+              <p className="text-xs text-zinc-500">
+                서울특별시 송파구 중대로 197, 3층 305호 (가락동)
               </p>
             </div>
             <div className="space-y-2">
@@ -69,10 +75,18 @@ export default function PublicLayout({
               </Link>
             </div>
           </div>
-          <p className="mt-6 border-t border-zinc-200 pt-4 text-xs text-zinc-400">
-            © {new Date().getFullYear()} 온시아(주). 공인중개사가 검증한 단기임대
-            플랫폼.
-          </p>
+          <div className="mt-6 space-y-2 border-t border-zinc-200 pt-4">
+            <p className="text-xs text-zinc-400">
+              파트너 중개사무소가 등록한 매물의 경우, BOOIN은 통신판매중개자로서
+              통신판매의 당사자가 아니며, 해당 거래에 관한 의무와 책임은 각
+              거래 당사자에게 있습니다. 온시아공인중개사사무소가 직접 중개하는
+              매물은 공인중개사법에 따라 중개대상물을 확인·설명합니다.
+            </p>
+            <p className="text-xs text-zinc-400">
+              © {new Date().getFullYear()} 온시아공인중개사사무소. 공인중개사가
+              검증하고 입주까지 함께하는 단기임대.
+            </p>
+          </div>
         </div>
       </footer>
     </div>

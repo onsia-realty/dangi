@@ -60,12 +60,24 @@ export default function PartnerPage() {
             검증하고 계약과 정산을 책임집니다. 임대인·중개사님은 공실 정보만
             알려주시면 됩니다.
           </p>
-          <a
-            href="#lead-form"
-            className="mt-6 inline-flex items-center rounded-lg bg-emerald-600 px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-700"
-          >
-            매물 접수하기
-          </a>
+          <div className="mt-6 flex flex-wrap items-center gap-3">
+            <a
+              href="#lead-form"
+              className="inline-flex items-center rounded-lg bg-emerald-600 px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-700"
+            >
+              매물 접수하기
+            </a>
+            <a
+              href="/partner-console/apply"
+              className="inline-flex items-center rounded-lg border border-emerald-600 px-5 py-3 text-sm font-semibold text-emerald-700 hover:bg-emerald-50"
+            >
+              공인중개사 파트너 신청
+            </a>
+          </div>
+          <p className="mt-3 text-xs text-zinc-500">
+            공인중개사님은 파트너로 승인받아 직접 매물을 등록하고, 계약 성사 시
+            이용요금의 7%를 리워드로 받을 수 있습니다.
+          </p>
         </div>
       </section>
 

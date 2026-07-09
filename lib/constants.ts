@@ -54,3 +54,13 @@ export const WEEKS_PER_MONTH = 4.345;
 
 // 시세 배지 노출 임계값(%): 차이율이 이 값 이하일 때만 "합리적 요금" 표시
 export const PRICE_BADGE_MAX_DIFF_PERCENT = 15;
+
+// 파트너(공인중개사) 리워드율(%): 계약 성사 시 이용요금(임대료+관리비+청소비)의 이 비율을 지급
+export const PARTNER_REWARD_PERCENT = 7;
+
+// 파트너 승인 상태 라벨
+export const PARTNER_STATUS_LABEL: Record<string, string> = {
+  pending: "심사 중",
+  approved: "승인 완료",
+  rejected: "반려",
+};

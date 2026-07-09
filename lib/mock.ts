@@ -7,8 +7,22 @@
 // =====================================================================
 import type { Booking, Property } from "./supabase/types";
 
+// 003 파트너 채널 컬럼 기본값(목데이터는 전부 direct 직영 매물).
+// 각 객체에 반복 기재하지 않도록 정규화 단계에서 주입한다.
+type MockPropertyBase = Omit<
+  Property,
+  "partner_id" | "channel" | "owner_consent" | "owner_consent_note"
+>;
+
+const PARTNER_COLUMN_DEFAULTS = {
+  partner_id: null,
+  channel: "direct" as const,
+  owner_consent: false,
+  owner_consent_note: null,
+};
+
 // 매물 10건 (seed.sql properties 와 동일)
-export const MOCK_PROPERTIES: Property[] = [
+const MOCK_PROPERTIES_BASE: MockPropertyBase[] = [
   {
     id: "22222222-2222-2222-2222-222222222201",
     created_at: "2026-06-01T00:00:00Z",
@@ -248,6 +262,12 @@ export const MOCK_PROPERTIES: Property[] = [
     lead_id: "11111111-1111-1111-1111-111111111104",
   },
 ];
+
+// 파트너 채널 기본값을 주입한 최종 매물 목록(Property[]).
+export const MOCK_PROPERTIES: Property[] = MOCK_PROPERTIES_BASE.map((p) => ({
+  ...p,
+  ...PARTNER_COLUMN_DEFAULTS,
+}));
 
 // 예약 블록 1건 (seed.sql bookings 와 동일)
 export const MOCK_BOOKINGS: Booking[] = [

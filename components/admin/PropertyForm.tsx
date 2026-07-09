@@ -23,6 +23,7 @@ import {
   type PropertyFormValues,
 } from "@/lib/actions/properties";
 import type { Property, PropertyStatus } from "@/lib/supabase/types";
+import { BuildingLedgerLookup } from "@/components/admin/BuildingLedgerLookup";
 
 const STORAGE_BUCKET = "property-photos";
 
@@ -42,12 +43,21 @@ function numOrNull(s: string): number | null {
 export function PropertyForm({
   mode,
   property,
+  variant = "admin",
+  partnerId,
 }: {
   mode: "create" | "edit";
   property?: Property;
+  // 'admin' = 온시아 직영(channel=direct, 기존 동작)
+  // 'partner' = 파트너 중개사 등록(channel=partner, status=hidden 고정, 임대인 동의 필수)
+  variant?: "admin" | "partner";
+  // partner variant 에서 본인 파트너 id (insert 시 partner_id 로 사용)
+  partnerId?: string;
 }) {
   const router = useRouter();
   const configured = isSupabaseConfigured();
+  const isPartner = variant === "partner";
+  const listHref = isPartner ? "/partner-console/properties" : "/admin/properties";
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [saving, startSaving] = useTransition();
 
@@ -85,7 +95,15 @@ export function PropertyForm({
   );
   const [verified, setVerified] = useState(property?.verified ?? false);
   const [status, setStatus] = useState<PropertyStatus>(
-    property?.status ?? "active",
+    // 파트너 매물은 등록 직후 무조건 hidden(관리자 검수 후 공개)
+    isPartner ? "hidden" : property?.status ?? "active",
+  );
+  // 파트너 전용: 임대인 동의(필수) + 동의 방식 메모
+  const [ownerConsent, setOwnerConsent] = useState(
+    property?.owner_consent ?? false,
+  );
+  const [ownerConsentNote, setOwnerConsentNote] = useState(
+    property?.owner_consent_note ?? "",
   );
   const [options, setOptions] = useState<Record<string, boolean>>(() => {
     const init: Record<string, boolean> = {};
@@ -155,6 +173,28 @@ export function PropertyForm({
     setPhotos((prev) => prev.filter((p) => p !== url));
   }
 
+  // ---- 건축물대장 자동 채움 ----
+  // PropertyForm 에는 층수/사용승인일/구조/주차 전용 필드가 없어,
+  // 매핑 가능한 건물유형만 채우고 나머지는 요약을 상세주소(내부전용)에 삽입한다.
+  function applyLedger(payload: {
+    guessedBuildingType: string | null;
+    summary: string;
+    applySummaryToDetail: boolean;
+  }) {
+    if (
+      payload.guessedBuildingType &&
+      (BUILDING_TYPES as readonly string[]).includes(payload.guessedBuildingType)
+    ) {
+      setBuildingType(payload.guessedBuildingType);
+    }
+    if (payload.applySummaryToDetail && payload.summary) {
+      setAddressDetail((prev) => {
+        const cleaned = prev.replace(/\[건축물대장\][^\n]*/g, "").trim();
+        return cleaned ? `${cleaned}\n${payload.summary}` : payload.summary;
+      });
+    }
+  }
+
   // ---- 저장 ----
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -162,6 +202,12 @@ export function PropertyForm({
 
     if (!title.trim()) {
       setSaveError("제목을 입력해 주세요.");
+      return;
+    }
+
+    // 파트너 매물: 임대인 동의 필수(RLS 도 owner_consent=true 를 요구)
+    if (isPartner && !ownerConsent) {
+      setSaveError("임대인 동의를 확인해 주세요(필수).");
       return;
     }
 
@@ -179,9 +225,16 @@ export function PropertyForm({
       options,
       photos,
       market_monthly_rent: numOrNull(marketMonthly),
-      verified,
-      status,
+      // 검증(등기부)은 관리자 전용 — 파트너는 항상 false 로 등록
+      verified: isPartner ? false : verified,
+      // 파트너는 hidden 고정
+      status: isPartner ? "hidden" : status,
       lead_id: property?.lead_id ?? null,
+      // 003: 채널 필드
+      channel: isPartner ? "partner" : "direct",
+      partner_id: isPartner ? partnerId ?? null : null,
+      owner_consent: isPartner ? ownerConsent : false,
+      owner_consent_note: isPartner ? ownerConsentNote.trim() || null : null,
     };
 
     startSaving(async () => {
@@ -193,7 +246,7 @@ export function PropertyForm({
         setSaveError(res.error ?? "저장에 실패했습니다.");
         return;
       }
-      router.push("/admin/properties");
+      router.push(listHref);
       router.refresh();
     });
   }
@@ -241,6 +294,8 @@ export function PropertyForm({
             />
           </label>
         </div>
+
+        <BuildingLedgerLookup address={address} onApply={applyLedger} />
 
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           <label className="flex flex-col gap-1">
@@ -422,35 +477,82 @@ export function PropertyForm({
         </p>
       </section>
 
-      {/* 상태/검증 */}
-      <section className="space-y-4">
-        <h2 className="text-sm font-semibold text-zinc-700">노출/검증</h2>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <label className="flex flex-col gap-1">
-            <span className={labelClass}>노출 상태</span>
-            <select
-              className={fieldClass}
-              value={status}
-              onChange={(e) => setStatus(e.target.value as PropertyStatus)}
-            >
-              {PROPERTY_STATUSES.map((s) => (
-                <option key={s} value={s}>
-                  {STATUS_LABEL[s]}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="flex items-center gap-2 pt-6">
+      {/* 파트너 전용: 임대인 동의 */}
+      {isPartner && (
+        <section className="space-y-4">
+          <h2 className="text-sm font-semibold text-zinc-700">
+            임대인 동의 <span className="text-red-500">*</span>
+          </h2>
+          <label className="flex items-start gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-3">
             <input
               type="checkbox"
-              checked={verified}
-              onChange={(e) => setVerified(e.target.checked)}
-              className="h-4 w-4 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500"
+              checked={ownerConsent}
+              onChange={(e) => setOwnerConsent(e.target.checked)}
+              className="mt-0.5 h-4 w-4 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500"
             />
-            <span className={labelClass}>공인중개사 검증 완료(등기부 확인)</span>
+            <span className="text-sm text-zinc-800">
+              해당 매물의 임대인으로부터 단기임대 등록·노출에 대한 동의를
+              받았음을 확인합니다.
+              <span className="mt-1 block text-xs text-zinc-500">
+                동의 없이 등록된 매물은 반려되며, 책임은 등록 중개사에게
+                있습니다.
+              </span>
+            </span>
           </label>
+          <label className="flex flex-col gap-1">
+            <span className={labelClass}>동의 방식 메모(내부 전용)</span>
+            <input
+              className={fieldClass}
+              value={ownerConsentNote}
+              onChange={(e) => setOwnerConsentNote(e.target.value)}
+              placeholder="예: 2026-07-08 임대인 홍길동 유선 동의 / 위임장 보관"
+            />
+          </label>
+        </section>
+      )}
+
+      {/* 상태/검증 (관리자 전용) */}
+      {!isPartner && (
+        <section className="space-y-4">
+          <h2 className="text-sm font-semibold text-zinc-700">노출/검증</h2>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <label className="flex flex-col gap-1">
+              <span className={labelClass}>노출 상태</span>
+              <select
+                className={fieldClass}
+                value={status}
+                onChange={(e) => setStatus(e.target.value as PropertyStatus)}
+              >
+                {PROPERTY_STATUSES.map((s) => (
+                  <option key={s} value={s}>
+                    {STATUS_LABEL[s]}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="flex items-center gap-2 pt-6">
+              <input
+                type="checkbox"
+                checked={verified}
+                onChange={(e) => setVerified(e.target.checked)}
+                className="h-4 w-4 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500"
+              />
+              <span className={labelClass}>
+                공인중개사 검증 완료(등기부 확인)
+              </span>
+            </label>
+          </div>
+        </section>
+      )}
+
+      {/* 파트너: 검수 안내 */}
+      {isPartner && (
+        <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-xs text-zinc-600">
+          등록하신 매물은 <span className="font-semibold">관리자 검수 후 공개</span>
+          됩니다(등록 직후에는 노출되지 않습니다). 계약 성사 시 이용요금의 7%가
+          리워드로 지급됩니다.
         </div>
-      </section>
+      )}
 
       {saveError && (
         <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">
@@ -464,7 +566,7 @@ export function PropertyForm({
         </Button>
         <button
           type="button"
-          onClick={() => router.push("/admin/properties")}
+          onClick={() => router.push(listHref)}
           className="rounded-lg border border-zinc-300 px-4 py-2.5 text-sm font-medium text-zinc-600 hover:bg-zinc-100"
         >
           취소

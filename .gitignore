@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+.env*.local
+
+# 세션 아티팩트
+.playwright-mcp/
+*.png
+.vercel/

@@ -26,6 +26,10 @@ export interface PropertyOptions {
 
 // 매물 상태 / 리드 단계 / 문의 상태
 export type PropertyStatus = "active" | "hidden" | "booked";
+// 매물 채널: direct=BOOIN 직영, partner=파트너 중개사 등록
+export type PropertyChannel = "direct" | "partner";
+// 파트너(공인중개사) 승인 상태
+export type PartnerStatus = "pending" | "approved" | "rejected";
 export type LeadStage =
   | "발굴"
   | "제안발송"
@@ -58,6 +62,11 @@ export interface Database {
           market_monthly_rent: number | null; // 주변 월세 시세(수동입력)
           status: PropertyStatus;
           lead_id: string | null;
+          // 003: 파트너 채널 컬럼
+          partner_id: string | null; // 파트너 매물이면 dangi_partners.id
+          channel: PropertyChannel; // 'direct' | 'partner'
+          owner_consent: boolean; // 임대인 동의 여부(파트너 매물 필수)
+          owner_consent_note: string | null; // 동의 방식 메모(내부 전용)
         };
         Insert: {
           id?: string;
@@ -78,6 +87,10 @@ export interface Database {
           market_monthly_rent?: number | null;
           status?: PropertyStatus;
           lead_id?: string | null;
+          partner_id?: string | null;
+          channel?: PropertyChannel;
+          owner_consent?: boolean;
+          owner_consent_note?: string | null;
         };
         Update: {
           id?: string;
@@ -98,6 +111,55 @@ export interface Database {
           market_monthly_rent?: number | null;
           status?: PropertyStatus;
           lead_id?: string | null;
+          partner_id?: string | null;
+          channel?: PropertyChannel;
+          owner_consent?: boolean;
+          owner_consent_note?: string | null;
+        };
+        Relationships: [];
+      };
+      dangi_partners: {
+        Row: {
+          id: string;
+          created_at: string;
+          user_id: string;
+          email: string;
+          office_name: string;
+          registration_no: string; // 중개사무소 등록번호
+          business_no: string | null; // 사업자등록번호
+          phone: string | null;
+          settle_bank: string | null; // 리워드 정산 은행
+          settle_account: string | null; // 리워드 정산 계좌
+          status: PartnerStatus; // pending | approved | rejected
+          admin_memo: string | null;
+        };
+        Insert: {
+          id?: string;
+          created_at?: string;
+          user_id: string;
+          email: string;
+          office_name: string;
+          registration_no: string;
+          business_no?: string | null;
+          phone?: string | null;
+          settle_bank?: string | null;
+          settle_account?: string | null;
+          status?: PartnerStatus;
+          admin_memo?: string | null;
+        };
+        Update: {
+          id?: string;
+          created_at?: string;
+          user_id?: string;
+          email?: string;
+          office_name?: string;
+          registration_no?: string;
+          business_no?: string | null;
+          phone?: string | null;
+          settle_bank?: string | null;
+          settle_account?: string | null;
+          status?: PartnerStatus;
+          admin_memo?: string | null;
         };
         Relationships: [];
       };
@@ -242,3 +304,9 @@ export type InquiryUpdate = Database["public"]["Tables"]["inquiries"]["Update"];
 export type Booking = Database["public"]["Tables"]["bookings"]["Row"];
 export type BookingInsert = Database["public"]["Tables"]["bookings"]["Insert"];
 export type BookingUpdate = Database["public"]["Tables"]["bookings"]["Update"];
+
+export type DangiPartner = Database["public"]["Tables"]["dangi_partners"]["Row"];
+export type DangiPartnerInsert =
+  Database["public"]["Tables"]["dangi_partners"]["Insert"];
+export type DangiPartnerUpdate =
+  Database["public"]["Tables"]["dangi_partners"]["Update"];

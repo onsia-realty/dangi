@@ -9,6 +9,7 @@
 import type { ReactNode } from "react";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { isDangiAdminEmail } from "@/lib/admin-emails";
 import { Sidebar } from "@/components/admin/Sidebar";
 import { LogoutButton } from "@/components/admin/LogoutButton";
 
@@ -32,6 +33,31 @@ export default async function AdminLayout({
   // 미인증(=로그인 페이지) → 셸 없이 children
   if (!user) {
     return <BareWrapper>{children}</BareWrapper>;
+  }
+
+  // 로그인은 됐지만 화이트리스트가 아닌 계정 → 셸 렌더 금지, 안내만.
+  //   (정상 흐름에선 middleware 가 먼저 /admin/login?error=not_admin 으로 보내지만,
+  //    심층 방어로 레이아웃에서도 한 번 더 차단한다.)
+  if (!isDangiAdminEmail(user.email)) {
+    return (
+      <BareWrapper>
+        <div className="w-full max-w-sm rounded-2xl border border-zinc-200 bg-white p-6 text-center shadow-sm">
+          <p className="text-sm font-medium text-zinc-900">
+            관리자 권한이 없는 계정입니다.
+          </p>
+          <p className="mt-2 text-xs text-zinc-500">
+            이 계정({user.email})은 관리자 콘솔 접근 권한이 없습니다. 온시아
+            관리자에게 문의하세요.
+          </p>
+          <a
+            href="/admin/login?error=not_admin"
+            className="mt-4 inline-block text-xs font-medium text-emerald-700 underline"
+          >
+            로그인 페이지로 이동
+          </a>
+        </div>
+      </BareWrapper>
+    );
   }
 
   // 인증됨 → 사이드바 셸
